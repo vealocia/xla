@@ -7,6 +7,7 @@ from train_decoder_only_fsdp_v2 import TrainDecoderOnlyFSDPv2
 import math
 
 from torch_xla import runtime as xr
+from torch_xla.experimental.spmd_fully_sharded_data_parallel import SpmdFullyShardedDataParallel
 
 def apply_xla_flash_attention_with_spmd(query_states, key_states, value_states):
     from torch_xla.experimental.custom_kernel import flash_attention
@@ -25,9 +26,9 @@ class TrainDecoderOnlyFlashAttentionFSDPv2(TrainDecoderOnlyFSDPv2):
     def __init__(self):
         super().__init__()
 
-        self.config.use_flash_attention = True
-        for layer in self.model.layers:
-            layer.self_attn.flash_attention_impl = apply_xla_flash_attention_with_spmd        
+        # self.config.use_flash_attention = True
+        # for layer in self.model.layers:
+        #     layer.self_attn.flash_attention_impl = apply_xla_flash_attention_with_spmd        
 
 if __name__ == '__main__':
   # Enable the SPMD

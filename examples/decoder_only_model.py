@@ -5,6 +5,23 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+try:
+    import torch_xla
+    from torch_xla.distributed.spmd import XLAShardedTensor
+except:
+    logger.warning(f"Import torch_xla failed.")
+
+
+def inspect_tensor_sharding(t, **kwargs):
+
+    # XLAShardedTensor is-a torch.Tensor
+    def maybe_unwrap(t: torch.Tensor) -> torch.Tensor:
+        return t.global_tensor if isinstance(t, XLAShardedTensor) else t
+
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(maybe_unwrap(t))
+    return sharding
+
+
 
 # the default config is intentionally kept low to make it runnable on a single tpu v2-8 core.
 @dataclass

@@ -22,10 +22,11 @@ class TrainDecoderOnlyBase:
                config=DecoderOnlyConfig()):
     self.config = config
     if xr.device_type() == 'NEURON':
-      self.batch_size = 4
+      self.batch_size = 1
     else:
-      self.batch_size = 16
-    self.seq_len = 512
+      self.batch_size = 1
+    self.seq_len = 16384
+    print("seqlen:", self.seq_len)
     self.num_steps = num_steps
     self.num_epochs = 1
     self.train_dataset_len = 1200000  # Roughly the size of Imagenet dataset.
@@ -45,7 +46,8 @@ class TrainDecoderOnlyBase:
         self.step_fn, full_graph=True, name="decoder_step_fn")
 
   def _train_update(self, step, loss, tracker, epoch):
-    print(f'epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
+    current_time = time.strftime('%H-%M-%S')
+    print(f'time: {current_time}, epoch: {epoch}, step: {step}, loss: {loss}, rate: {tracker.rate()}')
     assert not torch.isnan(loss).item(), "Loss became NaN!"
 
   def run_optimizer(self):
@@ -53,9 +55,9 @@ class TrainDecoderOnlyBase:
 
   def step_fn(self, data, target):
     self.optimizer.zero_grad()
-    logits = self.model(data)
+    logits = self.model(data, return_dict=False, use_cache=False)[0]
     loss = self.loss_fn(
-        logits.view(-1, self.config.vocab_size), target.view(-1))
+        logits.view(-1, logits.size(-1)), target.view(-1))
     loss.backward()
     self.run_optimizer()
     return loss
@@ -67,7 +69,7 @@ class TrainDecoderOnlyBase:
     for step, (data, target) in enumerate(loader):
       loss = self.compiled_step_fn(data, target)
       tracker.add(self.batch_size)
-      if step % 10 == 0:
+      if step % 1 == 0:
         xm.add_step_closure(
             self._train_update, args=(step, loss, tracker, epoch))
 
